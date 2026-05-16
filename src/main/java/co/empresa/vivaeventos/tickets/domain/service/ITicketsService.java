@@ -25,4 +25,6 @@ public interface ITicketsService {
     IssuedTicketResponse revokeTicket(UUID ticketId, String reason);
 
     List<ValidationResponse> getValidationsByTicket(UUID ticketId);
+
+    void releaseTicketsByOrder(UUID orderId, String reason);
 }

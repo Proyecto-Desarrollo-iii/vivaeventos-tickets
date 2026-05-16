@@ -117,4 +117,18 @@ public class TicketsController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/release-by-order/{orderId}")
+    public ResponseEntity<Map<String, Object>> releaseTicketsByOrder(
+            @PathVariable UUID orderId,
+            @RequestBody Map<String, String> request) {
+        String reason = request.getOrDefault("reason", "Payment failed or timeout");
+        ticketsService.releaseTicketsByOrder(orderId, reason);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("mensaje", "Boletas liberadas exitosamente");
+        response.put("orderId", orderId);
+
+        return ResponseEntity.ok(response);
+    }
 }

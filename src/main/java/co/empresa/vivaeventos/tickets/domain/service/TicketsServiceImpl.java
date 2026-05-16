@@ -161,6 +161,20 @@ public class TicketsServiceImpl implements ITicketsService {
                 .toList();
     }
 
+    @Override
+    @Transactional
+    public void releaseTicketsByOrder(UUID orderId, String reason) {
+        List<IssuedTicket> tickets = ticketRepository.findByOrderId(orderId);
+        for (IssuedTicket ticket : tickets) {
+            if (ticket.getStatus() == TicketStatus.ISSUED) {
+                ticket.setStatus(TicketStatus.REVOKED);
+                ticket.setRevokedAt(LocalDateTime.now());
+                ticket.setRevokedReason(reason);
+                ticketRepository.save(ticket);
+            }
+        }
+    }
+
     private String generateUniqueQrCode() {
         String candidate;
         int attempts = 0;
