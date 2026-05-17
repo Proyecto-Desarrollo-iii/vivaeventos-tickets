@@ -85,17 +85,17 @@ jobs:
           retention-days: 7
 
       - name: SonarCloud Analysis
+        uses: SonarSource/sonarqube-scan-action@v8
 
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-        run: |
-          mvn sonar:sonar \
-            -Dsonar.projectKey=proyecto-desarrollo-iii_vivaeventos-tickets \
-            -Dsonar.organization=proyecto-desarrollo-iii \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.token=${SONAR_TOKEN} \
-            -Dsonar.java.binaries=target/classes \
+        with:
+          args: >
+            -Dsonar.projectKey=proyecto-desarrollo-iii_vivaeventos-tickets
+            -Dsonar.organization=proyecto-desarrollo-iii
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.java.binaries=target/classes
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
   docker-build-and-push:
