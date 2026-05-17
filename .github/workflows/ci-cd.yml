@@ -85,6 +85,8 @@ jobs:
           retention-days: 7
 
       - name: SonarCloud Analysis
+        if: ${{ env.SONAR_TOKEN != '' }}
+        continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v8
 
         env:
@@ -92,9 +94,10 @@ jobs:
 
         with:
           args: >
-            -Dsonar.projectKey=proyecto-desarrollo-iii_vivaeventos-tickets
+            -Dsonar.projectKey=Proyecto-Desarrollo-iii_vivaeventos-tickets
             -Dsonar.organization=proyecto-desarrollo-iii
             -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.sources=src/main/java
             -Dsonar.java.binaries=target/classes
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
