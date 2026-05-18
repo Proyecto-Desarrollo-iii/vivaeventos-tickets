@@ -22,7 +22,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -214,6 +220,41 @@ class TicketsServiceImplTest {
         when(ticketRepository.existsById(ticketId)).thenReturn(false);
 
         assertThrows(TicketNotFoundException.class, () -> service.getValidationsByTicket(ticketId));
+    }
+
+    @Test
+    void issueTicket_concurrentTickets_allHaveUniqueQrCodes() throws InterruptedException {
+        int threadCount = 20;
+        AtomicInteger savedCount = new AtomicInteger(0);
+        Set<String> qrCodes = ConcurrentHashMap.newKeySet();
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+
+        when(ticketRepository.existsByQrCode(anyString())).thenReturn(false);
+        when(ticketRepository.save(any(IssuedTicket.class))).thenAnswer(inv -> {
+            IssuedTicket t = inv.getArgument(0);
+            t.setId(UUID.randomUUID());
+            t.setIssuedAt(LocalDateTime.now());
+            savedCount.incrementAndGet();
+            qrCodes.add(t.getQrCode());
+            return t;
+        });
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.submit(() -> {
+                try {
+                    service.issueTicket(issueRequest);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executor.shutdown();
+
+        assertEquals(threadCount, savedCount.get(), "Todos los tickets deben haberse guardado");
+        assertEquals(threadCount, qrCodes.size(), "Todos los QR deben ser unicos");
+        verify(ticketRepository, times(threadCount)).save(any(IssuedTicket.class));
     }
 
     private IssuedTicket buildIssuedTicket(TicketStatus status) {
