@@ -3,10 +3,7 @@ package co.empresa.vivaeventos.tickets.delivery.rest;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssueTicketRequest;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssuedTicketResponse;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.RevokeTicketRequest;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidateTicketRequest;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidationResponse;
 import co.empresa.vivaeventos.tickets.domain.model.TicketStatus;
-import co.empresa.vivaeventos.tickets.domain.model.ValidationResult;
 import co.empresa.vivaeventos.tickets.domain.service.ITicketsService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -83,37 +80,16 @@ class TicketsControllerTest {
     }
 
     @Test
-    void validateTicket_returnsOkWhenSuccess() {
-        ValidateTicketRequest req = new ValidateTicketRequest();
-        req.setQrCode("QR-1");
-        ValidationResponse vr = new ValidationResponse(
-                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                "Festival Demo", "VIP", "Ana", "ana@test.com",
-                "QR-1", ValidationResult.SUCCESS, "Ingreso autorizado",
-                "Puerta 1", "logistica-01", LocalDateTime.now());
-        when(ticketsService.validateTicket(any(ValidateTicketRequest.class))).thenReturn(vr);
+    void markAsUsed_returnsOk() {
+        UUID id = UUID.randomUUID();
+        IssuedTicketResponse expected = sampleTicketResponse(TicketStatus.USED);
+        when(ticketsService.markAsUsed(id)).thenReturn(expected);
 
-        ResponseEntity<Map<String, Object>> response = controller.validateTicket(req);
+        ResponseEntity<Map<String, Object>> response = controller.markAsUsed(id);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(true, response.getBody().get("autorizado"));
-    }
-
-    @Test
-    void validateTicket_returnsConflictWhenAlreadyUsed() {
-        ValidateTicketRequest req = new ValidateTicketRequest();
-        req.setQrCode("QR-2");
-        ValidationResponse vr = new ValidationResponse(
-                UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
-                "Festival Demo", "General", "Juan", "juan@test.com",
-                "QR-2", ValidationResult.ALREADY_USED, "La boleta ya fue utilizada",
-                null, null, LocalDateTime.now());
-        when(ticketsService.validateTicket(any(ValidateTicketRequest.class))).thenReturn(vr);
-
-        ResponseEntity<Map<String, Object>> response = controller.validateTicket(req);
-
-        assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
-        assertEquals(false, response.getBody().get("autorizado"));
+        assertEquals("Boleta marcada como utilizada", response.getBody().get("mensaje"));
+        assertEquals(expected, response.getBody().get("boleta"));
     }
 
     @Test
@@ -128,22 +104,6 @@ class TicketsControllerTest {
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertEquals("Boleta revocada exitosamente", response.getBody().get("mensaje"));
-    }
-
-    @Test
-    void getValidations_returnsHistory() {
-        UUID id = UUID.randomUUID();
-        ValidationResponse vr = new ValidationResponse(
-                UUID.randomUUID(), id, UUID.randomUUID(),
-                null, null, null, null,
-                "QR-1", ValidationResult.SUCCESS, null,
-                "Puerta 1", "logistica-01", LocalDateTime.now());
-        when(ticketsService.getValidationsByTicket(id)).thenReturn(List.of(vr));
-
-        ResponseEntity<Map<String, Object>> response = controller.getValidations(id);
-
-        assertEquals(HttpStatus.OK, response.getStatusCode());
-        assertEquals(1, response.getBody().get("total"));
     }
 
     private IssuedTicketResponse sampleTicketResponse(TicketStatus status) {

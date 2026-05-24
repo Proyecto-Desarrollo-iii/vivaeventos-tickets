@@ -2,8 +2,6 @@ package co.empresa.vivaeventos.tickets.domain.service;
 
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssueTicketRequest;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssuedTicketResponse;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidateTicketRequest;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidationResponse;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,11 +18,9 @@ public interface ITicketsService {
 
     List<IssuedTicketResponse> getTicketsByOrder(UUID orderId);
 
-    ValidationResponse validateTicket(ValidateTicketRequest request);
+    IssuedTicketResponse markAsUsed(UUID ticketId);
 
     IssuedTicketResponse revokeTicket(UUID ticketId, String reason);
-
-    List<ValidationResponse> getValidationsByTicket(UUID ticketId);
 
     void releaseTicketsByOrder(UUID orderId, String reason);
 }

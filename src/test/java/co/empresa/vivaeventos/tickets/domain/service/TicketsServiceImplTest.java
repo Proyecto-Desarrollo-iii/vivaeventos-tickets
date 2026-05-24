@@ -2,14 +2,9 @@ package co.empresa.vivaeventos.tickets.domain.service;
 
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssueTicketRequest;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssuedTicketResponse;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidateTicketRequest;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidationResponse;
 import co.empresa.vivaeventos.tickets.domain.model.IssuedTicket;
 import co.empresa.vivaeventos.tickets.domain.model.TicketStatus;
-import co.empresa.vivaeventos.tickets.domain.model.TicketValidation;
-import co.empresa.vivaeventos.tickets.domain.model.ValidationResult;
 import co.empresa.vivaeventos.tickets.domain.repository.IIssuedTicketRepository;
-import co.empresa.vivaeventos.tickets.domain.repository.ITicketValidationRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -32,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,9 +34,6 @@ class TicketsServiceImplTest {
 
     @Mock
     private IIssuedTicketRepository ticketRepository;
-
-    @Mock
-    private ITicketValidationRepository validationRepository;
 
     @InjectMocks
     private TicketsServiceImpl service;
@@ -94,71 +86,42 @@ class TicketsServiceImplTest {
     }
 
     @Test
-    void validateTicket_successWhenIssued_marksAsUsed() {
+    void markAsUsed_succeedsOnIssued() {
         IssuedTicket ticket = buildIssuedTicket(TicketStatus.ISSUED);
-        when(ticketRepository.findByQrCode("QR-1")).thenReturn(Optional.of(ticket));
-        when(validationRepository.save(any(TicketValidation.class))).thenAnswer(inv -> {
-            TicketValidation v = inv.getArgument(0);
-            v.setId(UUID.randomUUID());
-            v.setValidatedAt(LocalDateTime.now());
-            return v;
-        });
+        when(ticketRepository.findById(ticket.getId())).thenReturn(Optional.of(ticket));
+        when(ticketRepository.save(any(IssuedTicket.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        ValidateTicketRequest req = new ValidateTicketRequest();
-        req.setQrCode("QR-1");
-        req.setGateLocation("Puerta 1");
-        req.setValidatedBy("logistica-01");
+        IssuedTicketResponse response = service.markAsUsed(ticket.getId());
 
-        ValidationResponse response = service.validateTicket(req);
-
-        assertEquals(ValidationResult.SUCCESS, response.result());
-        assertEquals(TicketStatus.USED, ticket.getStatus());
-        assertNotNull(ticket.getUsedAt());
+        assertEquals(TicketStatus.USED, response.status());
+        assertNotNull(response.usedAt());
         verify(ticketRepository).save(ticket);
     }
 
     @Test
-    void validateTicket_rejectsAlreadyUsed() {
+    void markAsUsed_failsIfAlreadyUsed() {
         IssuedTicket ticket = buildIssuedTicket(TicketStatus.USED);
-        when(ticketRepository.findByQrCode("QR-2")).thenReturn(Optional.of(ticket));
-        when(validationRepository.save(any(TicketValidation.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ticketRepository.findById(ticket.getId())).thenReturn(Optional.of(ticket));
 
-        ValidateTicketRequest req = new ValidateTicketRequest();
-        req.setQrCode("QR-2");
-
-        ValidationResponse response = service.validateTicket(req);
-
-        assertEquals(ValidationResult.ALREADY_USED, response.result());
+        assertThrows(IllegalStateException.class, () -> service.markAsUsed(ticket.getId()));
         verify(ticketRepository, never()).save(any(IssuedTicket.class));
     }
 
     @Test
-    void validateTicket_rejectsRevoked() {
+    void markAsUsed_failsIfRevoked() {
         IssuedTicket ticket = buildIssuedTicket(TicketStatus.REVOKED);
-        when(ticketRepository.findByQrCode("QR-3")).thenReturn(Optional.of(ticket));
-        when(validationRepository.save(any(TicketValidation.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(ticketRepository.findById(ticket.getId())).thenReturn(Optional.of(ticket));
 
-        ValidateTicketRequest req = new ValidateTicketRequest();
-        req.setQrCode("QR-3");
-
-        ValidationResponse response = service.validateTicket(req);
-
-        assertEquals(ValidationResult.REVOKED, response.result());
+        assertThrows(IllegalStateException.class, () -> service.markAsUsed(ticket.getId()));
         verify(ticketRepository, never()).save(any(IssuedTicket.class));
     }
 
     @Test
-    void validateTicket_notFoundQr_logsValidation() {
-        when(ticketRepository.findByQrCode("QR-X")).thenReturn(Optional.empty());
-        when(validationRepository.save(any(TicketValidation.class))).thenAnswer(inv -> inv.getArgument(0));
+    void markAsUsed_failsIfTicketMissing() {
+        UUID id = UUID.randomUUID();
+        when(ticketRepository.findById(id)).thenReturn(Optional.empty());
 
-        ValidateTicketRequest req = new ValidateTicketRequest();
-        req.setQrCode("QR-X");
-
-        ValidationResponse response = service.validateTicket(req);
-
-        assertEquals(ValidationResult.NOT_FOUND, response.result());
-        verify(validationRepository).save(any(TicketValidation.class));
+        assertThrows(TicketNotFoundException.class, () -> service.markAsUsed(id));
     }
 
     @Test
@@ -191,35 +154,6 @@ class TicketsServiceImplTest {
 
         assertThrows(IllegalStateException.class,
                 () -> service.revokeTicket(ticket.getId(), "duplicada"));
-    }
-
-    @Test
-    void getValidationsByTicket_returnsHistory() {
-        UUID ticketId = UUID.randomUUID();
-        when(ticketRepository.existsById(ticketId)).thenReturn(true);
-
-        TicketValidation v1 = new TicketValidation();
-        v1.setId(UUID.randomUUID());
-        v1.setIssuedTicketId(ticketId);
-        v1.setQrCode("QR-1");
-        v1.setResult(ValidationResult.SUCCESS);
-        v1.setValidatedAt(LocalDateTime.now());
-
-        when(validationRepository.findByIssuedTicketIdOrderByValidatedAtDesc(ticketId))
-                .thenReturn(List.of(v1));
-
-        List<ValidationResponse> responses = service.getValidationsByTicket(ticketId);
-
-        assertEquals(1, responses.size());
-        assertEquals(ValidationResult.SUCCESS, responses.get(0).result());
-    }
-
-    @Test
-    void getValidationsByTicket_throwsIfTicketMissing() {
-        UUID ticketId = UUID.randomUUID();
-        when(ticketRepository.existsById(ticketId)).thenReturn(false);
-
-        assertThrows(TicketNotFoundException.class, () -> service.getValidationsByTicket(ticketId));
     }
 
     @Test
