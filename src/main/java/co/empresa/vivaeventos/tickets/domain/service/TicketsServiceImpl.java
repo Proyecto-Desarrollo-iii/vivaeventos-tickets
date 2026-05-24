@@ -5,6 +5,7 @@ import co.empresa.vivaeventos.tickets.domain.model.Dto.IssuedTicketResponse;
 import co.empresa.vivaeventos.tickets.domain.model.IssuedTicket;
 import co.empresa.vivaeventos.tickets.domain.model.TicketStatus;
 import co.empresa.vivaeventos.tickets.domain.repository.IIssuedTicketRepository;
+import co.empresa.vivaeventos.tickets.domain.util.QRCodeGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -140,6 +141,9 @@ public class TicketsServiceImpl implements ITicketsService {
     }
 
     private IssuedTicketResponse mapToResponse(IssuedTicket ticket) {
+        String qrCode = ticket.getQrCode();
+        String qrImage = QRCodeGenerator.toBase64DataUri(qrCode);
+
         return new IssuedTicketResponse(
                 ticket.getId(),
                 ticket.getOrderId(),
@@ -151,7 +155,8 @@ public class TicketsServiceImpl implements ITicketsService {
                 ticket.getHolderEmail(),
                 ticket.getHolderDocument(),
                 ticket.getPrice(),
-                ticket.getQrCode(),
+                qrCode,
+                qrImage,
                 ticket.getStatus(),
                 ticket.getIssuedAt(),
                 ticket.getUsedAt(),
