@@ -2,32 +2,23 @@ package co.empresa.vivaeventos.tickets.domain.service;
 
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssueTicketRequest;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssuedTicketResponse;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidateTicketRequest;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidationResponse;
 import co.empresa.vivaeventos.tickets.domain.model.IssuedTicket;
 import co.empresa.vivaeventos.tickets.domain.model.TicketStatus;
-import co.empresa.vivaeventos.tickets.domain.model.TicketValidation;
-import co.empresa.vivaeventos.tickets.domain.model.ValidationResult;
 import co.empresa.vivaeventos.tickets.domain.repository.IIssuedTicketRepository;
-import co.empresa.vivaeventos.tickets.domain.repository.ITicketValidationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class TicketsServiceImpl implements ITicketsService {
 
     private final IIssuedTicketRepository ticketRepository;
-    private final ITicketValidationRepository validationRepository;
 
-    public TicketsServiceImpl(IIssuedTicketRepository ticketRepository,
-                              ITicketValidationRepository validationRepository) {
+    public TicketsServiceImpl(IIssuedTicketRepository ticketRepository) {
         this.ticketRepository = ticketRepository;
-        this.validationRepository = validationRepository;
     }
 
     @Override
@@ -84,50 +75,20 @@ public class TicketsServiceImpl implements ITicketsService {
 
     @Override
     @Transactional
-    public ValidationResponse validateTicket(ValidateTicketRequest request) {
-        Optional<IssuedTicket> opt = ticketRepository.findByQrCode(request.getQrCode());
+    public IssuedTicketResponse markAsUsed(UUID ticketId) {
+        IssuedTicket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Boleta no encontrada: " + ticketId));
 
-        TicketValidation validation = new TicketValidation();
-        validation.setQrCode(request.getQrCode());
-        validation.setGateLocation(request.getGateLocation());
-        validation.setValidatedBy(request.getValidatedBy());
-
-        if (opt.isEmpty()) {
-            validation.setResult(ValidationResult.NOT_FOUND);
-            TicketValidation saved = validationRepository.save(validation);
-            return buildValidationResponse(saved, "QR no corresponde a una boleta emitida");
+        if (ticket.getStatus() == TicketStatus.REVOKED) {
+            throw new IllegalStateException("No se puede marcar como usada una boleta revocada");
+        }
+        if (ticket.getStatus() == TicketStatus.USED) {
+            throw new IllegalStateException("La boleta ya fue utilizada");
         }
 
-        IssuedTicket ticket = opt.get();
-        validation.setIssuedTicketId(ticket.getId());
-        validation.setEventId(ticket.getEventId());
-
-        switch (ticket.getStatus()) {
-            case REVOKED -> {
-                validation.setResult(ValidationResult.REVOKED);
-                TicketValidation saved = validationRepository.save(validation);
-                return buildValidationResponse(saved, "La boleta fue revocada", ticket);
-            }
-            case USED -> {
-                validation.setResult(ValidationResult.ALREADY_USED);
-                TicketValidation saved = validationRepository.save(validation);
-                return buildValidationResponse(saved, "La boleta ya fue utilizada", ticket);
-            }
-            case ISSUED -> {
-                ticket.setStatus(TicketStatus.USED);
-                ticket.setUsedAt(LocalDateTime.now());
-                ticketRepository.save(ticket);
-
-                validation.setResult(ValidationResult.SUCCESS);
-                TicketValidation saved = validationRepository.save(validation);
-                return buildValidationResponse(saved, "Ingreso autorizado", ticket);
-            }
-            default -> {
-                validation.setResult(ValidationResult.NOT_FOUND);
-                TicketValidation saved = validationRepository.save(validation);
-                return buildValidationResponse(saved, "Estado de boleta no soportado", ticket);
-            }
-        }
+        ticket.setStatus(TicketStatus.USED);
+        ticket.setUsedAt(LocalDateTime.now());
+        return mapToResponse(ticketRepository.save(ticket));
     }
 
     @Override
@@ -148,17 +109,6 @@ public class TicketsServiceImpl implements ITicketsService {
         ticket.setRevokedReason(reason);
 
         return mapToResponse(ticketRepository.save(ticket));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ValidationResponse> getValidationsByTicket(UUID ticketId) {
-        if (!ticketRepository.existsById(ticketId)) {
-            throw new TicketNotFoundException("Boleta no encontrada: " + ticketId);
-        }
-        return validationRepository.findByIssuedTicketIdOrderByValidatedAtDesc(ticketId).stream()
-                .map(v -> buildValidationResponse(v, null))
-                .toList();
     }
 
     @Override
@@ -207,28 +157,6 @@ public class TicketsServiceImpl implements ITicketsService {
                 ticket.getUsedAt(),
                 ticket.getRevokedAt(),
                 ticket.getRevokedReason()
-        );
-    }
-
-    private ValidationResponse buildValidationResponse(TicketValidation validation, String message) {
-        return buildValidationResponse(validation, message, null);
-    }
-
-    private ValidationResponse buildValidationResponse(TicketValidation validation, String message, IssuedTicket ticket) {
-        return new ValidationResponse(
-                validation.getId(),
-                validation.getIssuedTicketId(),
-                validation.getEventId(),
-                ticket != null ? ticket.getEventName() : null,
-                ticket != null ? ticket.getTicketType() : null,
-                ticket != null ? ticket.getHolderName() : null,
-                ticket != null ? ticket.getHolderEmail() : null,
-                validation.getQrCode(),
-                validation.getResult(),
-                message,
-                validation.getGateLocation(),
-                validation.getValidatedBy(),
-                validation.getValidatedAt()
         );
     }
 }

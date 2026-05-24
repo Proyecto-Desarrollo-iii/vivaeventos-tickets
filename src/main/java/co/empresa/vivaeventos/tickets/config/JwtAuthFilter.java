@@ -77,10 +77,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     /**
      * Politica de acceso por endpoint:
-     *  - POST /issue           -> cualquier autenticado (en produccion deberia ser SYSTEM/ADMIN)
-     *  - POST /validate        -> ORGANIZER o ADMIN (logistica como rol del organizador)
-     *  - POST /{id}/revoke     -> ORGANIZER o ADMIN
-     *  - GET *                 -> cualquier autenticado
+     *  - POST /issue              -> cualquier autenticado (en produccion deberia ser SYSTEM/ADMIN)
+     *  - POST /{id}/revoke        -> ORGANIZER o ADMIN
+     *  - PUT  /{id}/mark-used     -> ORGANIZER o ADMIN (invocado por checkin)
+     *  - GET *                    -> cualquier autenticado
      */
     private boolean hasAccess(HttpServletRequest req, String role) {
         if (role == null || role.isBlank()) return false;
@@ -99,11 +99,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (path.endsWith("/revoke")) {
                 return isAdmin || isOrganizer;
             }
-            if (path.endsWith("/validate")) {
-                return isAdmin || isOrganizer;
-            }
             if (path.endsWith("/issue")) {
                 return isAdmin || isOrganizer || isClient;
+            }
+            return false;
+        }
+        if ("PUT".equalsIgnoreCase(method)) {
+            if (path.endsWith("/mark-used")) {
+                return isAdmin || isOrganizer;
             }
             return false;
         }

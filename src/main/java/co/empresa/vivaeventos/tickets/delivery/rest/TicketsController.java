@@ -3,9 +3,6 @@ package co.empresa.vivaeventos.tickets.delivery.rest;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssueTicketRequest;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.IssuedTicketResponse;
 import co.empresa.vivaeventos.tickets.domain.model.Dto.RevokeTicketRequest;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidateTicketRequest;
-import co.empresa.vivaeventos.tickets.domain.model.Dto.ValidationResponse;
-import co.empresa.vivaeventos.tickets.domain.model.ValidationResult;
 import co.empresa.vivaeventos.tickets.domain.service.ITicketsService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -80,19 +77,15 @@ public class TicketsController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/validate")
-    public ResponseEntity<Map<String, Object>> validateTicket(@Valid @RequestBody ValidateTicketRequest request) {
-        ValidationResponse validation = ticketsService.validateTicket(request);
+    @PutMapping("/{ticketId}/mark-used")
+    public ResponseEntity<Map<String, Object>> markAsUsed(@PathVariable UUID ticketId) {
+        IssuedTicketResponse ticket = ticketsService.markAsUsed(ticketId);
 
         Map<String, Object> response = new HashMap<>();
-        response.put("validacion", validation);
-        response.put("autorizado", validation.result() == ValidationResult.SUCCESS);
+        response.put("mensaje", "Boleta marcada como utilizada");
+        response.put("boleta", ticket);
 
-        HttpStatus status = validation.result() == ValidationResult.SUCCESS
-                ? HttpStatus.OK
-                : HttpStatus.CONFLICT;
-
-        return ResponseEntity.status(status).body(response);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/{ticketId}/revoke")
@@ -103,17 +96,6 @@ public class TicketsController {
         Map<String, Object> response = new HashMap<>();
         response.put("mensaje", "Boleta revocada exitosamente");
         response.put("boleta", ticket);
-
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/{ticketId}/validations")
-    public ResponseEntity<Map<String, Object>> getValidations(@PathVariable UUID ticketId) {
-        List<ValidationResponse> validations = ticketsService.getValidationsByTicket(ticketId);
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("validaciones", validations);
-        response.put("total", validations.size());
 
         return ResponseEntity.ok(response);
     }
