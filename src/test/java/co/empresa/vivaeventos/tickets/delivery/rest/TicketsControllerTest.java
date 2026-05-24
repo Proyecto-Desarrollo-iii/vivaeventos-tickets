@@ -119,6 +119,7 @@ class TicketsControllerTest {
                 "CC123",
                 new BigDecimal("100000"),
                 "QR-" + UUID.randomUUID(),
+                "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
                 status,
                 LocalDateTime.now(),
                 status == TicketStatus.USED ? LocalDateTime.now() : null,

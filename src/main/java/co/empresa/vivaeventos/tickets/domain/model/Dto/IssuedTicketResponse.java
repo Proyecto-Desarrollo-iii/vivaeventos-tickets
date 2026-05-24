@@ -18,6 +18,7 @@ public record IssuedTicketResponse(
         String holderDocument,
         BigDecimal price,
         String qrCode,
+        String qrImage,
         TicketStatus status,
         LocalDateTime issuedAt,
         LocalDateTime usedAt,
