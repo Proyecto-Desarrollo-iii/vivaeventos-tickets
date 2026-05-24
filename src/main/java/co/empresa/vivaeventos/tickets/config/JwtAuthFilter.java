@@ -94,6 +94,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         boolean isAdmin = "ADMIN".equalsIgnoreCase(role);
         boolean isOrganizer = "ORGANIZER".equalsIgnoreCase(role);
         boolean isClient = "CLIENT".equalsIgnoreCase(role);
+        boolean isLogistica = "LOGISTICA".equalsIgnoreCase(role);
 
         if ("POST".equalsIgnoreCase(method)) {
             if (path.endsWith("/revoke")) {
@@ -106,12 +107,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
         if ("PUT".equalsIgnoreCase(method)) {
             if (path.endsWith("/mark-used")) {
-                return isAdmin || isOrganizer;
+                return isAdmin || isOrganizer || isLogistica;
             }
             return false;
         }
         if ("GET".equalsIgnoreCase(method)) {
-            return isAdmin || isOrganizer || isClient;
+            return isAdmin || isOrganizer || isClient || isLogistica;
         }
         return false;
     }
