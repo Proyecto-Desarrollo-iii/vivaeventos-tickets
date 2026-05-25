@@ -77,7 +77,7 @@ public class TicketsServiceImpl implements ITicketsService {
     @Override
     @Transactional
     public IssuedTicketResponse markAsUsed(UUID ticketId) {
-        IssuedTicket ticket = ticketRepository.findById(ticketId)
+        IssuedTicket ticket = ticketRepository.findByIdWithLock(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Boleta no encontrada: " + ticketId));
 
         if (ticket.getStatus() == TicketStatus.REVOKED) {

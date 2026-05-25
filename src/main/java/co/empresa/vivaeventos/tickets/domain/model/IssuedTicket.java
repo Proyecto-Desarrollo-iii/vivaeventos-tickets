@@ -68,6 +68,10 @@ public class IssuedTicket {
     @Column(name = "revoked_reason")
     private String revokedReason;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private int version;
+
     @PrePersist
     protected void onCreate() {
         if (issuedAt == null) {
