@@ -117,6 +117,7 @@ class TicketsControllerTest {
                 "Ana",
                 "ana@example.com",
                 "CC123",
+                UUID.randomUUID(),
                 new BigDecimal("100000"),
                 "QR-" + UUID.randomUUID(),
                 "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
