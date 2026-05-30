@@ -40,4 +40,6 @@ public class IssueTicketRequest {
     @NotNull(message = "price es obligatorio")
     @PositiveOrZero(message = "price no puede ser negativo")
     private BigDecimal price;
+
+    private UUID userId;
 }

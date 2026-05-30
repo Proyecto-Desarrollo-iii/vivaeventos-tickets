@@ -16,6 +16,7 @@ public record IssuedTicketResponse(
         String holderName,
         String holderEmail,
         String holderDocument,
+        UUID userId,
         BigDecimal price,
         String qrCode,
         String qrImage,

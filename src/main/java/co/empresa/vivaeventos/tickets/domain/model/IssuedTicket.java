@@ -46,6 +46,9 @@ public class IssuedTicket {
     @Column(name = "holder_document")
     private String holderDocument;
 
+    @Column(name = "user_id")
+    private UUID userId;
+
     @Column(name = "price", nullable = false)
     private BigDecimal price;
 

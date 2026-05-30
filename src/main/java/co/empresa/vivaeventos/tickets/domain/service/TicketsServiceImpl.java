@@ -38,6 +38,10 @@ public class TicketsServiceImpl implements ITicketsService {
         ticket.setStatus(TicketStatus.ISSUED);
         ticket.setQrCode(generateUniqueQrCode());
 
+        if (request.getUserId() != null) {
+            ticket.setUserId(request.getUserId());
+        }
+
         IssuedTicket saved = ticketRepository.save(ticket);
         return mapToResponse(saved);
     }
@@ -154,6 +158,7 @@ public class TicketsServiceImpl implements ITicketsService {
                 ticket.getHolderName(),
                 ticket.getHolderEmail(),
                 ticket.getHolderDocument(),
+                ticket.getUserId(),
                 ticket.getPrice(),
                 qrCode,
                 qrImage,
