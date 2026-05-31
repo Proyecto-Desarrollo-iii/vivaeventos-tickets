@@ -88,7 +88,7 @@ class TicketsServiceImplTest {
     @Test
     void markAsUsed_succeedsOnIssued() {
         IssuedTicket ticket = buildIssuedTicket(TicketStatus.ISSUED);
-        when(ticketRepository.findById(ticket.getId())).thenReturn(Optional.of(ticket));
+        when(ticketRepository.findByIdWithLock(ticket.getId())).thenReturn(Optional.of(ticket));
         when(ticketRepository.save(any(IssuedTicket.class))).thenAnswer(inv -> inv.getArgument(0));
 
         IssuedTicketResponse response = service.markAsUsed(ticket.getId());
@@ -101,7 +101,7 @@ class TicketsServiceImplTest {
     @Test
     void markAsUsed_failsIfAlreadyUsed() {
         IssuedTicket ticket = buildIssuedTicket(TicketStatus.USED);
-        when(ticketRepository.findById(ticket.getId())).thenReturn(Optional.of(ticket));
+        when(ticketRepository.findByIdWithLock(ticket.getId())).thenReturn(Optional.of(ticket));
 
         assertThrows(IllegalStateException.class, () -> service.markAsUsed(ticket.getId()));
         verify(ticketRepository, never()).save(any(IssuedTicket.class));
@@ -110,7 +110,7 @@ class TicketsServiceImplTest {
     @Test
     void markAsUsed_failsIfRevoked() {
         IssuedTicket ticket = buildIssuedTicket(TicketStatus.REVOKED);
-        when(ticketRepository.findById(ticket.getId())).thenReturn(Optional.of(ticket));
+        when(ticketRepository.findByIdWithLock(ticket.getId())).thenReturn(Optional.of(ticket));
 
         assertThrows(IllegalStateException.class, () -> service.markAsUsed(ticket.getId()));
         verify(ticketRepository, never()).save(any(IssuedTicket.class));
@@ -119,7 +119,7 @@ class TicketsServiceImplTest {
     @Test
     void markAsUsed_failsIfTicketMissing() {
         UUID id = UUID.randomUUID();
-        when(ticketRepository.findById(id)).thenReturn(Optional.empty());
+        when(ticketRepository.findByIdWithLock(id)).thenReturn(Optional.empty());
 
         assertThrows(TicketNotFoundException.class, () -> service.markAsUsed(id));
     }
