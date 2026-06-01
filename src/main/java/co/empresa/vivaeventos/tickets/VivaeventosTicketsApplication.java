@@ -1,5 +1,5 @@
 package co.empresa.vivaeventos.tickets;
-
+//Comentario de prueba para el commit
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
