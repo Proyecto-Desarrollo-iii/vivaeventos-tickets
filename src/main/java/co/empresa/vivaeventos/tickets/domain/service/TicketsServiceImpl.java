@@ -6,6 +6,7 @@ import co.empresa.vivaeventos.tickets.domain.model.IssuedTicket;
 import co.empresa.vivaeventos.tickets.domain.model.TicketStatus;
 import co.empresa.vivaeventos.tickets.domain.repository.IIssuedTicketRepository;
 import co.empresa.vivaeventos.tickets.domain.util.QRCodeGenerator;
+import io.micrometer.observation.annotation.Observed;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ public class TicketsServiceImpl implements ITicketsService {
         this.ticketRepository = ticketRepository;
     }
 
+    @Observed(name = "tickets.issue_ticket", contextualName = "issueTicket")
     @Override
     @Transactional
     public IssuedTicketResponse issueTicket(IssueTicketRequest request) {
@@ -78,6 +80,7 @@ public class TicketsServiceImpl implements ITicketsService {
                 .toList();
     }
 
+    @Observed(name = "tickets.mark_as_used", contextualName = "markAsUsed")
     @Override
     @Transactional
     public IssuedTicketResponse markAsUsed(UUID ticketId) {
